@@ -1,4 +1,5 @@
 {
   "name": "Solvis Heating",
-  "render_readme": "Yes"
+  "render_readme": true,
+  "homeassistant": "2025.1.0"
 }

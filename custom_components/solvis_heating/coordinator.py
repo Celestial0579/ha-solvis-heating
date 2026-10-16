@@ -1,89 +1,54 @@
-"""SolvisRemoteData integration."""
+"""Data update coordinator for the Solvis Heating integration."""
+
+from __future__ import annotations
+
 from datetime import timedelta
 import logging
-
-from sc2xmlreader.sc2xmlreader import SC2XMLReader
+from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import update_coordinator
+from homeassistant.exceptions import ConfigEntryAuthFailed
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import (
-    CONF_OPTION_BURNER_POWER,
-    CONF_OPTION_OVEN,
-    CONF_OPTION_SOLAR,
-    CONF_OPTION_SOLAR_EAST_WEST,
-    CONF_OPTION_WARMWATER_STATION,
-    CONF_UPDATE_TIMESPAN,
-    DEFAULT_MANUFACTURER,
-    DEFAULT_MODEL,
-    DOMAIN,
-)
+from .api import CannotConnect, InvalidAuth, InvalidData, NoXmlInterface, Sc2Client
+from .const import CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL, DOMAIN, OPTION_DEFAULTS
+from .sc2xml import Sc2Data
 
 _LOGGER = logging.getLogger(__name__)
 
+type SolvisConfigEntry = ConfigEntry[SolvisCoordinator]
 
-class SolvisRemoteCoordinator(update_coordinator.DataUpdateCoordinator):
-    """Get and update the latest data."""
 
-    def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
-        """Initialize the data object."""
+class SolvisCoordinator(DataUpdateCoordinator[Sc2Data]):
+    """Fetch the data of the SolvisRemote."""
+
+    config_entry: SolvisConfigEntry
+
+    def __init__(
+        self, hass: HomeAssistant, entry: SolvisConfigEntry, client: Sc2Client
+    ) -> None:
+        """Initialize the coordinator."""
         super().__init__(
             hass,
             _LOGGER,
-            name="SolvisRemoteCoordinator",
-            update_interval=timedelta(seconds=10),
+            config_entry=entry,
+            name=DOMAIN,
+            update_interval=timedelta(
+                seconds=entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+            ),
         )
+        self.client = client
+        # Options the entities were created with; used to detect option changes.
+        self.applied_options: dict[str, Any] = {**OPTION_DEFAULTS, **entry.options}
 
-        entry.async_on_unload(entry.add_update_listener(update_listener))
-        host_entry = entry.data[CONF_HOST]
-        self.username = entry.data[CONF_USERNAME]
-        self.password = entry.data[CONF_PASSWORD]
-
-        self.warmwater_station = entry.data[CONF_OPTION_WARMWATER_STATION]
-        self.solar = entry.data[CONF_OPTION_SOLAR]
-        self.solar_east_west = entry.data[CONF_OPTION_SOLAR_EAST_WEST]
-        self.oven = entry.data[CONF_OPTION_OVEN]
+    async def _async_update_data(self) -> Sc2Data:
+        """Fetch the latest data from the SolvisRemote."""
         try:
-            self.burner_power = entry.data[CONF_OPTION_BURNER_POWER]
-        except:
-            self.burner_power = 27
-
-        update_ = entry.data[CONF_UPDATE_TIMESPAN]
-        if 10 >= update_ <= 300:
-            self.update_interval = timedelta(seconds=update_)
-
-        self.unique_id = entry.entry_id
-        self.name = entry.title
-        self.target_url = f"""http://{host_entry}"""
-        self.manufacturer = DEFAULT_MANUFACTURER
-        self.model = DEFAULT_MODEL
-
-    async def _async_update_data(self):
-        """Update the data from the SolvisRemote device."""
-        try:
-            data = await self.hass.async_add_executor_job(
-                SC2XMLReader,
-                self.target_url,
-                self.username,
-                self.password,
-                self.warmwater_station,
-                self.solar,
-                self.solar_east_west,
-                self.oven,
-                self.burner_power
-            )
-        except BaseException as err:
-            raise update_coordinator.UpdateFailed(err)
-
-        return data
-
-
-async def update_listener(hass: HomeAssistant, entry: ConfigEntry):
-    """Handle options update."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]
-
-    update_ = entry.data[CONF_UPDATE_TIMESPAN]
-    if 10 >= update_ <= 300:
-        coordinator.update_interval = timedelta(seconds=update_)
+            return await self.client.async_get_data()
+        except InvalidAuth as err:
+            raise ConfigEntryAuthFailed(
+                "The SolvisRemote rejected the credentials"
+            ) from err
+        except (CannotConnect, NoXmlInterface, InvalidData) as err:
+            raise UpdateFailed(f"Error communicating with the SolvisRemote: {err}") from err
