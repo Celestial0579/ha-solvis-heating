@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.1.1
+
+Fixes the "Authentication expired" message that appeared after a few days.
+
+- The SolvisRemote issues a new Digest nonce every few seconds. The client no longer reuses the
+  challenge of an earlier poll, which sent a rejected login with almost every poll. Every poll now
+  starts with a fresh challenge, like a browser does.
+- A login that is rejected anyway is repeated once after two seconds before it counts as an error.
+- A rejected login no longer starts the reauthentication at once. An entry that has worked before
+  keeps trying (every 5 minutes after three rejected polls in a row) and only asks for the password
+  again when the rejections last for an hour. A wrong password at setup is still reported at once.
+- Diagnostics show the number of rejected polls in a row and the current update interval.
+
 ## 0.1.0
 
 First release of the maintained fork.

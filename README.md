@@ -118,6 +118,10 @@ value of the output (0 to 100, for modulating outputs).
 - **Cannot connect**: check the address and that Home Assistant may reach the SolvisRemote on
   port 80 (firewall between networks).
 - **Wrong user name or password**: use the login of the SolvisRemote web interface.
+- **Authentication expired**: the SolvisRemote sometimes rejects a correct login for a while. The
+  integration keeps trying and only shows this message when the login has been rejected for an
+  hour. If the password was not changed, open the integration, choose the three-dot menu and
+  *Reload*; the saved login is used again.
 - **No XML interface**: open the address of the XML file in a browser. If it does not exist, the
   controller or the SolvisRemote is too old for this integration.
 - **Debug log**: add this to `configuration.yaml` and restart.

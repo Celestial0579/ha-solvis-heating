@@ -19,6 +19,12 @@ XML_PATH = "/sc2_val.xml"
 REQUEST_TIMEOUT = 15
 MAX_RESPONSE_BYTES = 65536
 
+# The SolvisRemote hands out a new nonce every few seconds and does not accept the nonce of an
+# earlier poll, so every poll starts with a fresh challenge. A login that is rejected anyway is
+# repeated once after a short pause before it counts as a credential error.
+LOGIN_ATTEMPTS = 2
+LOGIN_RETRY_DELAY = 2.0  # seconds
+
 
 class SolvisError(Exception):
     """Base class for errors raised by the client."""
@@ -79,8 +85,7 @@ class Sc2Client:
         self._host = host
         self._username = username
         self._password = password
-        self._challenge: DigestChallenge | None = None
-        self._nonce_count = 0
+        self._rejection_logged = False
 
     @property
     def url(self) -> str:
@@ -98,13 +103,28 @@ class Sc2Client:
     async def _async_get_xml(self) -> str:
         try:
             async with asyncio.timeout(REQUEST_TIMEOUT):
-                status, authenticate, body = await self._async_request()
-                if status == 401:
-                    self._set_challenge(authenticate)
-                    status, authenticate, body = await self._async_request()
-                    if status == 401:
-                        self._challenge = None
-                        raise InvalidAuth("The credentials were rejected")
+                for attempt in range(1, LOGIN_ATTEMPTS + 1):
+                    status, body = await self._async_login_and_fetch()
+                    if status != 401:
+                        break
+                    if attempt < LOGIN_ATTEMPTS:
+                        _LOGGER.debug(
+                            "%s rejected the login (attempt %s of %s), trying again",
+                            self._host,
+                            attempt,
+                            LOGIN_ATTEMPTS,
+                        )
+                        await asyncio.sleep(LOGIN_RETRY_DELAY)
+                else:
+                    raise InvalidAuth("The credentials were rejected")
+                if attempt > 1 and not self._rejection_logged:
+                    self._rejection_logged = True
+                    _LOGGER.warning(
+                        "%s rejected the login %s time(s) before accepting it. Short "
+                        "rejections like this are retried and are not an error",
+                        self._host,
+                        attempt - 1,
+                    )
         except TimeoutError as err:
             raise CannotConnect(f"Timeout while connecting to {self._host}") from err
         except aiohttp.ClientError as err:
@@ -116,24 +136,29 @@ class Sc2Client:
             raise CannotConnect(f"Unexpected HTTP status {status} from {self._host}")
         return body
 
-    def _set_challenge(self, header: str | None) -> None:
+    async def _async_login_and_fetch(self) -> tuple[int, str]:
+        """Request the file without credentials, then answer the Digest challenge.
+
+        Every call starts with a fresh challenge, as a browser does, because the device no
+        longer accepts the nonce of an earlier poll.
+        """
+        status, authenticate, body = await self._async_request()
+        if status != 401:
+            return status, body
         try:
-            self._challenge = parse_challenge(header)
+            challenge = parse_challenge(authenticate)
         except DigestError as err:
             raise CannotConnect(str(err)) from err
-        self._nonce_count = 0
+        status, _authenticate, body = await self._async_request(challenge)
+        return status, body
 
-    async def _async_request(self) -> tuple[int, str | None, str]:
+    async def _async_request(
+        self, challenge: DigestChallenge | None = None
+    ) -> tuple[int, str | None, str]:
         headers: dict[str, str] = {}
-        if self._challenge is not None:
-            self._nonce_count += 1
+        if challenge is not None:
             headers["Authorization"] = build_authorization(
-                self._challenge,
-                self._username,
-                self._password,
-                "GET",
-                XML_PATH,
-                nonce_count=self._nonce_count,
+                challenge, self._username, self._password, "GET", XML_PATH
             )
         async with self._session.get(
             self.url, headers=headers, allow_redirects=False
