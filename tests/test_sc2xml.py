@@ -31,6 +31,21 @@ def test_extract_frame_without_data() -> None:
         extract_frame("<xml></xml>")
 
 
+# Frame of a SolvisVaero with heat pump, published in Lurchi70/ha-solvis-heating issue 4.
+HEAT_PUMP_FRAME = (
+    "AA5555AA056B1523130A007C001D0228011901F901C409C409C409C409A001F3FFE100C401750165010002C409"
+    "000000000000000000005F00000000000000000000006464000000000000006400008A1F1D267700FFFFFFFF00"
+    "00010304000401020200010077CD00000019010D19B9"
+).ljust(440, "0")
+
+
+def test_heat_pump_temperatures() -> None:
+    """S14 and S15 carry the heat pump return and flow temperature."""
+    data = parse_frame(HEAT_PUMP_FRAME, datetime(2025, 1, 13, tzinfo=UTC))
+    assert data.sensor(14) == 35.7
+    assert data.sensor(15) == 51.2
+
+
 def test_temperatures(sample_data: Sc2Data) -> None:
     """The temperatures are decoded little endian with one decimal."""
     assert sample_data.sensor(1) == 61.6

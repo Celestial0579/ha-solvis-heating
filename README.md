@@ -21,7 +21,7 @@ see [Differences to the original](#differences-to-the-original).
 - A Solvis system with a SolvisControl 2 controller and a **SolvisRemote** module that is
   reachable from Home Assistant on **port 80** (HTTP). The user name and password of the
   SolvisRemote are needed.
-- Home Assistant 2025.1 or newer.
+- Home Assistant 2025.8 or newer.
 
 To check that the XML interface is available, open `http://<address of the SolvisRemote>/sc2_val.xml`
 in a browser and log in. You should see a short XML document with a long hexadecimal string, like
@@ -56,7 +56,8 @@ Manual installation: copy the folder `custom_components/solvis_heating` into the
    - solar collectors are connected,
    - east/west solar collectors are connected (uses sensor input S16 and the outputs A6/A7),
    - a solid fuel oven is connected (uses sensor input S16 and the output A13),
-   - the rated power of the burner, which is only used to estimate the burner energy.
+   - the rated power of the burner, which is only used to estimate the burner energy. Set it
+     once: changing it later makes the burner energy jump in the long-term statistics.
 
 The system options and the update interval (default 60 seconds) can be changed later in the
 options of the integration. The login can be renewed (*Reauthentication*) and the address
@@ -76,6 +77,7 @@ installations are disabled by default.
 | Buffer reference temperature | °C | S3 | |
 | Heating buffer top / bottom temperature | °C | S4 / S9 | |
 | Heating circuit 1 / 2 flow temperature | °C | S12 / S13 | |
+| Heat pump return / flow temperature | °C | S14 / S15 | disabled by default |
 | Burner runtime | h | Z1 | total |
 | Burner starts / stage 2 starts | | Z2 / Z3 | total |
 | Burner energy (estimated) | kWh | Z1 × burner power | usable in the energy dashboard |

@@ -104,13 +104,13 @@ def build_authorization(
 
     parts = [
         f'username="{_quote(username)}"',
-        f'realm="{challenge.realm}"',
-        f'nonce="{challenge.nonce}"',
+        f'realm="{_quote(challenge.realm)}"',
+        f'nonce="{_quote(challenge.nonce)}"',
         f'uri="{uri}"',
         f'response="{response}"',
     ]
     if challenge.opaque:
-        parts.append(f'opaque="{challenge.opaque}"')
+        parts.append(f'opaque="{_quote(challenge.opaque)}"')
     if challenge.algorithm:
         parts.append(f'algorithm="{challenge.algorithm}"')
     if challenge.qop:

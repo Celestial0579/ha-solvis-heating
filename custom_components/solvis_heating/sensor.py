@@ -121,6 +121,9 @@ SENSORS: tuple[SolvisSensorEntityDescription, ...] = (
     _temperature("heating_buffer_bottom_temperature", 9),
     _temperature("heating_circuit_1_flow_temperature", 12),
     _temperature("heating_circuit_2_flow_temperature", 13),
+    # Heat pump (for example SolvisVaero); disabled by default because most systems have none
+    _temperature("heat_pump_return_temperature", 14, enabled_default=False),
+    _temperature("heat_pump_flow_temperature", 15, enabled_default=False),
     SolvisSensorEntityDescription(
         key="burner_runtime",
         translation_key="burner_runtime",

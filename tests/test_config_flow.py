@@ -245,6 +245,11 @@ async def test_options_flow(hass: HomeAssistant, mock_client: MagicMock) -> None
     assert result["type"] is FlowResultType.CREATE_ENTRY
     await hass.async_block_till_done()
     assert entry.options == new_options
+    # The flow reloads the entry, so the entities follow the options at once.
+    # A switched off entity is no longer provided; only its restored state remains.
+    state = hass.states.get("sensor.solvis_warm_water_station_temperature")
+    assert state.attributes.get("restored") is True
+    assert entry.runtime_data.update_interval.total_seconds() == 120
 
     await hass.config_entries.async_unload(entry.entry_id)
     await hass.async_block_till_done()

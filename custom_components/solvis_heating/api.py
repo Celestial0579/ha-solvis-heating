@@ -70,6 +70,22 @@ def normalize_host(value: str) -> str:
     return f"{host}:{port}" if port else host
 
 
+async def _async_read_limited(response: aiohttp.ClientResponse) -> str:
+    """Read the body, but never more than MAX_RESPONSE_BYTES.
+
+    The Content-Length header is only a hint: a chunked response has none, so the limit
+    is enforced while reading.
+    """
+    if (response.content_length or 0) > MAX_RESPONSE_BYTES:
+        raise InvalidData("The response is unexpectedly large")
+    data = bytearray()
+    async for chunk in response.content.iter_chunked(8192):
+        data.extend(chunk)
+        if len(data) > MAX_RESPONSE_BYTES:
+            raise InvalidData("The response is unexpectedly large")
+    return data.decode("utf-8", errors="replace")
+
+
 class Sc2Client:
     """Read the data frame of a SolvisControl 2 through the SolvisRemote."""
 
@@ -166,7 +182,5 @@ class Sc2Client:
             authenticate = response.headers.get("WWW-Authenticate")
             body = ""
             if response.status == 200:
-                if (response.content_length or 0) > MAX_RESPONSE_BYTES:
-                    raise InvalidData("The response is unexpectedly large")
-                body = (await response.read()).decode("utf-8", errors="replace")
+                body = await _async_read_limited(response)
             return response.status, authenticate, body

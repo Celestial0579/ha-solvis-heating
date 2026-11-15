@@ -7,7 +7,6 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import Sc2Client
-from .const import OPTION_DEFAULTS
 from .coordinator import SolvisConfigEntry, SolvisCoordinator
 
 PLATFORMS: list[Platform] = [Platform.BINARY_SENSOR, Platform.SENSOR]
@@ -25,8 +24,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: SolvisConfigEntry) -> bo
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
 
+    # No update listener: the options flow reloads the entry itself
+    # (OptionsFlowWithReload), and reauthentication and reconfiguration reload it with
+    # async_update_reload_and_abort. Home Assistant rejects a listener next to these
+    # reloading methods from 2026.12.
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-    entry.async_on_unload(entry.add_update_listener(_async_options_updated))
     return True
 
 
@@ -34,12 +36,3 @@ async def async_unload_entry(hass: HomeAssistant, entry: SolvisConfigEntry) -> b
     """Unload a config entry."""
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
-
-async def _async_options_updated(hass: HomeAssistant, entry: SolvisConfigEntry) -> None:
-    """Reload the entry when its options changed.
-
-    Updates of the connection data (reauthentication, reconfiguration) reload the entry
-    themselves, so only react to option changes here.
-    """
-    if {**OPTION_DEFAULTS, **entry.options} != entry.runtime_data.applied_options:
-        await hass.config_entries.async_reload(entry.entry_id)

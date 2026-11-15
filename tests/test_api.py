@@ -13,6 +13,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from custom_components.solvis_heating.api import (
     LOGIN_ATTEMPTS,
+    MAX_RESPONSE_BYTES,
     CannotConnect,
     InvalidAuth,
     InvalidData,
@@ -145,6 +146,32 @@ async def test_client_invalid_data(hass: HomeAssistant, aiohttp_server) -> None:
         async_get_clientsession(hass), f"127.0.0.1:{server.port}", USERNAME, PASSWORD
     )
     with pytest.raises(InvalidData):
+        await client.async_get_data()
+
+
+@pytest.mark.usefixtures("socket_enabled")
+async def test_client_rejects_a_large_chunked_response(
+    hass: HomeAssistant, aiohttp_server
+) -> None:
+    """The size limit also applies when the response has no Content-Length."""
+
+    async def handler(request: web.Request) -> web.StreamResponse:
+        if not request.headers.get("Authorization"):
+            return _challenge()
+        response = web.StreamResponse()  # no length: sent chunked
+        await response.prepare(request)
+        for _ in range(MAX_RESPONSE_BYTES // 1024 + 2):
+            await response.write(b"x" * 1024)
+        await response.write_eof()
+        return response
+
+    app = web.Application()
+    app.router.add_get("/sc2_val.xml", handler)
+    server = await aiohttp_server(app)
+    client = Sc2Client(
+        async_get_clientsession(hass), f"127.0.0.1:{server.port}", USERNAME, PASSWORD
+    )
+    with pytest.raises(InvalidData, match="large"):
         await client.async_get_data()
 
 
