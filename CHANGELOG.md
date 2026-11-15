@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.3
+
+- The burner energy is a real meter now: it adds the burner runtime since the last update times
+  the current rated power. Changing the power no longer rewrites the whole meter, which the
+  long-term statistics saw as a reset or a huge jump (#7). The value is kept across restarts.
+- A rejected login at the first poll after a restart of Home Assistant no longer asks for the
+  password at once when these credentials have worked before; the grace period of one hour
+  applies as during operation (#8).
+
 ## 0.1.2
 
 Required for Home Assistant 2026.12: from that version Home Assistant rejects reauthentication and

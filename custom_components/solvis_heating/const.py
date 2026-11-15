@@ -16,6 +16,9 @@ CONF_SOLAR_EAST_WEST = "east_west"
 CONF_OVEN = "oven"
 CONF_BURNER_POWER = "burner_power"
 CONF_SCAN_INTERVAL = "scan_interval"
+# Entry data: the saved credentials were accepted at least once. Every flow that saves
+# credentials checks them first, so the marker is set there and stays valid.
+HAS_WORKED = "has_worked"
 
 DEFAULT_BURNER_POWER = 27
 DEFAULT_SCAN_INTERVAL = 60

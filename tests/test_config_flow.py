@@ -20,6 +20,7 @@ from custom_components.solvis_heating.api import (
 )
 from custom_components.solvis_heating.const import (
     CONF_BURNER_POWER,
+    HAS_WORKED,
     CONF_OVEN,
     CONF_SCAN_INTERVAL,
     CONF_SOLAR,
@@ -84,7 +85,7 @@ async def test_user_flow(hass: HomeAssistant, mock_client: MagicMock) -> None:
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "Solvis"
-    assert result["data"] == ENTRY_DATA
+    assert result["data"] == {**ENTRY_DATA, HAS_WORKED: True}  # geprüft, also schon einmal angenommen
     assert result["options"] == {
         **SYSTEM_INPUT,
         CONF_SCAN_INTERVAL: DEFAULT_SCAN_INTERVAL,
@@ -218,6 +219,7 @@ async def test_reconfigure_flow(hass: HomeAssistant, mock_client: MagicMock) -> 
         CONF_HOST: "10.0.30.101",
         CONF_USERNAME: "other",
         CONF_PASSWORD: "pw",
+        HAS_WORKED: True,
     }
     assert entry.unique_id == "10.0.30.101"
 

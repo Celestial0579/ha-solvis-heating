@@ -71,7 +71,7 @@
           "scan_interval": "Abfrageintervall"
         },
         "data_description": {
-          "burner_power": "Nennleistung des Brenners. Sie wird nur benutzt, um aus der Brennerlaufzeit die Brennerenergie zu schätzen. Eine spätere Änderung lässt die Brennerenergie in der Langzeitstatistik springen; daher nur einmal direkt nach der Einrichtung festlegen.",
+          "burner_power": "Nennleistung des Brenners. Sie wird nur benutzt, um aus der Brennerlaufzeit die Brennerenergie zu schätzen. Eine Änderung gilt ab dann; die bisher gezählte Energie bleibt.",
           "scan_interval": "Wie oft das SolvisRemote gelesen wird. Alle 60 Sekunden genügt für die meisten Zwecke."
         }
       }

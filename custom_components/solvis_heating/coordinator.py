@@ -20,6 +20,7 @@ from .const import (
     CONF_SCAN_INTERVAL,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
+    HAS_WORKED,
     OPTION_DEFAULTS,
 )
 from .sc2xml import Sc2Data
@@ -69,6 +70,11 @@ class SolvisCoordinator(DataUpdateCoordinator[Sc2Data]):
         except (CannotConnect, NoXmlInterface, InvalidData) as err:
             raise UpdateFailed(f"Error communicating with the SolvisRemote: {err}") from err
 
+        if not self.config_entry.data.get(HAS_WORKED):
+            # Entries from before 0.1.3 learn it with the first accepted poll.
+            self.hass.config_entries.async_update_entry(
+                self.config_entry, data={**self.config_entry.data, HAS_WORKED: True}
+            )
         if self._auth_failures:
             _LOGGER.info(
                 "The SolvisRemote accepts the login again after %s rejected polls",
@@ -86,8 +92,9 @@ class SolvisCoordinator(DataUpdateCoordinator[Sc2Data]):
         the password right away would stop the polling until somebody confirms the dialog, so
         an entry that has worked before only starts the reauthentication after a longer outage.
         """
-        if self.data is None:
-            # No poll has worked yet, so the saved login is wrong.
+        if self.data is None and not self.config_entry.data.get(HAS_WORKED):
+            # These credentials were never accepted, so the saved login is wrong. Credentials
+            # that worked before (also before a restart of Home Assistant) get the grace period.
             raise ConfigEntryAuthFailed(
                 "The SolvisRemote rejected the credentials"
             ) from err

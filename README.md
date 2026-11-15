@@ -56,8 +56,9 @@ Manual installation: copy the folder `custom_components/solvis_heating` into the
    - solar collectors are connected,
    - east/west solar collectors are connected (uses sensor input S16 and the outputs A6/A7),
    - a solid fuel oven is connected (uses sensor input S16 and the output A13),
-   - the rated power of the burner, which is only used to estimate the burner energy. Set it
-     once: changing it later makes the burner energy jump in the long-term statistics.
+   - the rated power of the burner, which is only used to estimate the burner energy (runtime of
+     stage 1 times the rated power; stage 2 and modulation are not known to the controller's
+     interface). A later change applies from then on; the energy counted so far stays.
 
 The system options and the update interval (default 60 seconds) can be changed later in the
 options of the integration. The login can be renewed (*Reauthentication*) and the address

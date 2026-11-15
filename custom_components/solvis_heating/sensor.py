@@ -23,6 +23,7 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.restore_state import ExtraStoredData, RestoreEntity
 from homeassistant.helpers.typing import StateType
 
 from .const import (
@@ -151,6 +152,7 @@ SENSORS: tuple[SolvisSensorEntityDescription, ...] = (
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         state_class=SensorStateClass.TOTAL_INCREASING,
         suggested_display_precision=0,
+        # Only the starting value; SolvisBurnerEnergySensor adds the later runtime itself.
         value_fn=lambda data, options: data.burner_hours * options[CONF_BURNER_POWER],
     ),
     _room_temperature(0),
@@ -256,7 +258,9 @@ async def async_setup_entry(
     coordinator = entry.runtime_data
     options = coordinator.applied_options
     async_add_entities(
-        SolvisSensor(coordinator, description)
+        (SolvisBurnerEnergySensor if description.key == "burner_energy" else SolvisSensor)(
+            coordinator, description
+        )
         for description in SENSORS
         if description.exists_fn(options)
     )
@@ -282,3 +286,70 @@ class SolvisSensor(SolvisEntity, SensorEntity):
         return self.entity_description.value_fn(
             self.coordinator.data, self.coordinator.applied_options
         )
+
+
+@dataclass
+class _BurnerEnergyData(ExtraStoredData):
+    """Burner hours at the last update, stored with the state."""
+
+    burner_hours: int | None
+
+    def as_dict(self) -> dict[str, Any]:
+        """Return a dict for storage."""
+        return {"burner_hours": self.burner_hours}
+
+
+class SolvisBurnerEnergySensor(SolvisSensor, RestoreEntity):
+    """Burner energy as a real meter: runtime since the last update times the current power.
+
+    Multiplying the total runtime with the power made the whole meter change at once whenever
+    the power option changed: the recorder saw a reset (lower power) or added the difference
+    over the whole runtime (higher power). Now a changed power only applies from then on.
+    """
+
+    _energy: float | None = None
+    _hours: int | None = None
+
+    async def async_added_to_hass(self) -> None:
+        """Restore the meter and the burner hours it was counted to."""
+        await super().async_added_to_hass()
+        # The state itself, not async_get_last_sensor_data(): 0.1.2 stored no extra data.
+        if (last := await self.async_get_last_state()) is not None:
+            try:
+                self._energy = float(last.state)
+            except ValueError:  # unknown or unavailable
+                self._energy = None
+        if (extra := await self.async_get_last_extra_data()) is not None:
+            hours = extra.as_dict().get("burner_hours")
+            self._hours = hours if isinstance(hours, int) else None
+        self._count()
+
+    @property
+    def extra_restore_state_data(self) -> _BurnerEnergyData:
+        """Store the burner hours together with the meter."""
+        return _BurnerEnergyData(self._hours)
+
+    def _handle_coordinator_update(self) -> None:
+        """Count before writing the state."""
+        self._count()
+        super()._handle_coordinator_update()
+
+    def _count(self) -> None:
+        data = self.coordinator.data
+        if data is None:
+            return
+        hours = data.burner_hours
+        power = self.coordinator.applied_options[CONF_BURNER_POWER]
+        if self._energy is None:
+            # First start: the estimate for the runtime so far, as before.
+            self._energy = hours * power
+        elif self._hours is not None and hours > self._hours:
+            self._energy += (hours - self._hours) * power
+        # Restored from a version without stored hours, or the counter went back
+        # (controller replaced or reset): continue from the current hours without a jump.
+        self._hours = hours
+
+    @property
+    def native_value(self) -> StateType:
+        """Return the meter."""
+        return None if self._energy is None else round(self._energy, 3)
