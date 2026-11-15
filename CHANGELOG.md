@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.1.2
+
+Required for Home Assistant 2026.12: from that version Home Assistant rejects reauthentication and
+reconfiguration of an entry that also has an update listener.
+
+- The options flow reloads the entry itself; the update listener is gone (#1). Requires Home
+  Assistant 2025.8 or newer.
+- New sensors for the heat pump return and flow temperature (S14, S15), disabled by default (#3).
+- The size limit of the response also applies without a `Content-Length` header; the values of
+  the Digest challenge are escaped (#2).
+- The options explain that changing the burner power makes the burner energy jump (#4).
+- Brand images ship with the integration; CI actions are pinned, Dependabot watches them (#5).
+
 ## 0.1.1
 
 Fixes the "Authentication expired" message that appeared after a few days.

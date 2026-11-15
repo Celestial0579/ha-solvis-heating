@@ -12,7 +12,7 @@ from homeassistant.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
-    OptionsFlow,
+    OptionsFlowWithReload,
 )
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import callback
@@ -318,8 +318,11 @@ class SolvisConfigFlow(ConfigFlow, domain=DOMAIN):
         return SolvisOptionsFlow()
 
 
-class SolvisOptionsFlow(OptionsFlow):
-    """Handle the options of a Solvis Heating entry."""
+class SolvisOptionsFlow(OptionsFlowWithReload):
+    """Handle the options of a Solvis Heating entry.
+
+    The entry is reloaded when the options changed, so the entities follow the options.
+    """
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None

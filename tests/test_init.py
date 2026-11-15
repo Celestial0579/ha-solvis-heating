@@ -66,6 +66,10 @@ async def test_setup_and_unload(hass: HomeAssistant, mock_client: MagicMock) -> 
     assert pump.attributes["output_level"] == 100
     assert hass.states.get("binary_sensor.solvis_burner").state == "off"
 
+    # Home Assistant rejects reauthentication and reconfiguration of an entry with an
+    # update listener from 2026.12; the options flow reloads the entry instead.
+    assert not entry.update_listeners
+
     assert await hass.config_entries.async_unload(entry.entry_id)
     await hass.async_block_till_done()
     assert entry.state is ConfigEntryState.NOT_LOADED
@@ -89,6 +93,10 @@ async def test_options_select_the_entities(
     # Output A6 is the third heating circuit pump when no east/west solar is used.
     assert "heating_circuit_3_pump" in keys
     assert not keys & {"solar_valve_1", "oven_pump"}
+    # Heat pump sensors exist, but are disabled by default.
+    for key in ("heat_pump_return_temperature", "heat_pump_flow_temperature"):
+        entity_id = registry.async_get_entity_id("sensor", DOMAIN, f"{entry.entry_id}_{key}")
+        assert registry.async_get(entity_id).disabled_by is er.RegistryEntryDisabler.INTEGRATION
 
     await hass.config_entries.async_unload(entry.entry_id)
 

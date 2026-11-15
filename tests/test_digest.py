@@ -79,6 +79,14 @@ def test_username_is_quoted() -> None:
     assert 'username="a\\"b\\\\c"' in header
 
 
+def test_challenge_values_are_quoted() -> None:
+    """Quotes and backslashes in the values of the challenge are escaped."""
+    challenge = parse_challenge(r'Digest realm="a\"b", nonce="n\\", opaque="o\"p"')
+    header = build_authorization(challenge, "user", "pw", "GET", "/")
+    assert 'realm="a\\"b"' in header
+    assert 'opaque="o\\"p"' in header
+
+
 @pytest.mark.parametrize(
     "header",
     [

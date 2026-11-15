@@ -71,7 +71,7 @@
           "scan_interval": "Abfrageintervall"
         },
         "data_description": {
-          "burner_power": "Nennleistung des Brenners. Sie wird nur benutzt, um aus der Brennerlaufzeit die Brennerenergie zu schätzen.",
+          "burner_power": "Nennleistung des Brenners. Sie wird nur benutzt, um aus der Brennerlaufzeit die Brennerenergie zu schätzen. Eine spätere Änderung lässt die Brennerenergie in der Langzeitstatistik springen; daher nur einmal direkt nach der Einrichtung festlegen.",
           "scan_interval": "Wie oft das SolvisRemote gelesen wird. Alle 60 Sekunden genügt für die meisten Zwecke."
         }
       }
@@ -90,6 +90,8 @@
       "heating_buffer_bottom_temperature": {"name": "Heizpuffer unten"},
       "heating_circuit_1_flow_temperature": {"name": "Vorlauf Heizkreis 1"},
       "heating_circuit_2_flow_temperature": {"name": "Vorlauf Heizkreis 2"},
+      "heat_pump_return_temperature": {"name": "Wärmepumpe Rücklauf"},
+      "heat_pump_flow_temperature": {"name": "Wärmepumpe Vorlauf"},
       "burner_runtime": {"name": "Brenner Laufzeit"},
       "burner_starts": {"name": "Brennerstarts"},
       "burner_stage_2_starts": {"name": "Brennerstarts Stufe 2"},
