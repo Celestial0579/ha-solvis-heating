@@ -46,6 +46,7 @@ from .const import (
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_TITLE,
     DOMAIN,
+    HAS_WORKED,
     MAX_SCAN_INTERVAL,
     MIN_SCAN_INTERVAL,
     OPTION_DEFAULTS,
@@ -218,7 +219,7 @@ class SolvisConfigFlow(ConfigFlow, domain=DOMAIN):
             if not errors:
                 return self.async_create_entry(
                     title=DEFAULT_TITLE,
-                    data=self._connection,
+                    data={**self._connection, HAS_WORKED: True},
                     options={
                         CONF_SCAN_INTERVAL: DEFAULT_SCAN_INTERVAL,
                         **_clean_options(user_input),
@@ -252,7 +253,9 @@ class SolvisConfigFlow(ConfigFlow, domain=DOMAIN):
                 user_input[CONF_PASSWORD],
             )
             if error is None and data is not None:
-                return self.async_update_reload_and_abort(entry, data_updates=user_input)
+                return self.async_update_reload_and_abort(
+                    entry, data_updates={**user_input, HAS_WORKED: True}
+                )
             errors["base"] = error or "unknown"
 
         return self.async_show_form(
@@ -294,6 +297,7 @@ class SolvisConfigFlow(ConfigFlow, domain=DOMAIN):
                             CONF_HOST: host,
                             CONF_USERNAME: user_input[CONF_USERNAME],
                             CONF_PASSWORD: user_input[CONF_PASSWORD],
+                            HAS_WORKED: True,
                         },
                     )
                 errors["base"] = error or "unknown"
