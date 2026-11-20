@@ -1,1 +1,3 @@
-pytest-homeassistant-custom-component
+# Fixed version, so every CI run uses the same one. It also sets the Home Assistant version of the
+# tests, which must not be older than the minimum in hacs.json. Dependabot bumps it.
+pytest-homeassistant-custom-component==0.13.375
